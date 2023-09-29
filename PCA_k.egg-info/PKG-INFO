@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: PCA-k
+Version: 0.1
+Summary: Python Package for finding the average kidney shapes
+Home-page: https://github.com/mcgoughlin/KCD
+Author: bmcgough
+Author-email: billy.mcgough1@hotmail.com
+Keywords: pip,shape,PCA
+Requires-Python: >=3.10

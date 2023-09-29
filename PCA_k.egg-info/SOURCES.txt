@@ -1,0 +1,8 @@
+README.md
+setup.cfg
+setup.py
+PCA_k.egg-info/PKG-INFO
+PCA_k.egg-info/SOURCES.txt
+PCA_k.egg-info/dependency_links.txt
+PCA_k.egg-info/requires.txt
+PCA_k.egg-info/top_level.txt
