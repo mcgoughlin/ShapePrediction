@@ -1,0 +1,3 @@
+https://www.semanticscholar.org/paper/Unsupervised-Lesion-Detection-in-Brain-CT-using-Pawlowski-Lee/1cb5dea2a8f6abf0ef61ce229ee866594b6c5228 Pawlowski, N., Lee, M.J., Rajchl, M., McDonagh, S.G., Ferrante, E., Kamnitsas, K., Cooke, S., Stevenson, S., Khetani, A., Newman, T., Zeiler, F.A., Digby, R., Coles, J.P., Rueckert, D., Menon, D.K., Newcombe, V.F., & Glocker, B. (2018). Unsupervised Lesion Detection in Brain CT using Bayesian Convolutional Autoencoders.
+
+They use registered images of the head to generate equivalent 'norma' heads to compare test-time images to.
