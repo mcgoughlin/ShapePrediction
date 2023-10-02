@@ -20,11 +20,13 @@ torch.manual_seed(0)
 np.random.seed(0)
 
 # set hyperparameters
-n_epochs = 10000
-lr = 5e-5
+n_epochs = 1000
+lr = 5e-4
 n_points = 500
-depth = 10
-dropout = 0.95
+hidden_dim = n_points
+num_hidden_layers = 1
+depth = 5
+dropout = 0.8
 
 # set filepath
 filepath = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/aligned_pointclouds'
@@ -34,7 +36,7 @@ dataset = PointcloudDataset(filepath)
 dataloader = DataLoader(dataset,batch_size=len(dataset),shuffle=False)
 
 # create model
-model = MLP(n_points,depth,dropout=dropout).cuda()
+model = NICEModel(n_points,depth,dropout=dropout,hidden_dim=hidden_dim,num_hidden_layers=num_hidden_layers).cuda()
 print(model.layers)
 
 # create optimizer
@@ -47,6 +49,17 @@ loss_fn = nn.MSELoss()
 if not os.path.exists('models'):
     os.mkdir('models')
 
+# test invertibility post-training for sanity check
+model.eval()
+print(model)
+random = torch.rand((1, 1500)).cuda()
+out = model(random)
+inv_in = model.inverse(out)
+diff = torch.sum(torch.abs(inv_in-random)).item()
+print(diff)
+
+
+losses = []
 # train model
 for epoch in range(n_epochs):
     for i,(x,lb) in enumerate(dataloader):
@@ -55,15 +68,16 @@ for epoch in range(n_epochs):
         lb = lb.cuda()
         out = model(x)
         loss = loss_fn(out,lb)
+        losses.append(loss.item())
         loss.backward()
         optimizer.step()
         print('\rEpoch: {}, Batch: {}, Loss: {}'.format(epoch,i,loss.item()),end='')
 
-# test invertibility post-training for sanity check
-# model.eval()
-# print(model)
-# random = torch.rand((1, 1500)).cuda()
-# out = model(random)
-# inv_in = model.inverse(out)
-# diff = torch.sum(torch.abs(inv_in-random)).item()
-# print(diff)
+#plot moving average of loss curve
+import matplotlib.pyplot as plt
+sliding_window = len(losses)//100
+plt.plot(losses)
+plt.plot(np.convolve(losses,np.ones(sliding_window)/sliding_window,mode='valid'))
+plt.show()
+
+
