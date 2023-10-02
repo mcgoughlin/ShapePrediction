@@ -24,9 +24,9 @@ n_epochs = 1000
 lr = 5e-4
 n_points = 500
 hidden_dim = n_points
-num_hidden_layers = 1
-depth = 5
-dropout = 0.8
+num_hidden_layers = 0
+depth = 4
+dropout = 0.95
 
 # set filepath
 filepath = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/aligned_pointclouds'
@@ -73,11 +73,30 @@ for epoch in range(n_epochs):
         optimizer.step()
         print('\rEpoch: {}, Batch: {}, Loss: {}'.format(epoch,i,loss.item()),end='')
 
-#plot moving average of loss curve
+#plot moving average of loss curve, and an input / output pointcloud pair
+# extract left and right average pointclouds from the dataset
 import matplotlib.pyplot as plt
-sliding_window = len(losses)//100
-plt.plot(losses)
-plt.plot(np.convolve(losses,np.ones(sliding_window)/sliding_window,mode='valid'))
+
+left_pointcloud = x[0].cpu().detach().numpy().reshape(-1,3) + dataset.left_avg.reshape(-1,3)
+left_pointcloud_pred = model.inverse(lb)[0].cpu().detach().numpy().reshape(-1,3) + dataset.left_avg.reshape(-1,3)
+right_pointcloud_pred = out[0].cpu().detach().numpy().reshape(-1,3) + dataset.right_avg.reshape(-1,3)
+right_pointcloud = lb[0].cpu().detach().numpy().reshape(-1,3) + dataset.right_avg.reshape(-1,3)
+
+lim = np.abs(left_pointcloud).max()*1.1
+# subplot of 3d pointclouds and loss curves
+fig, ax = plt.subplots(1, 3, subplot_kw={'projection': '3d'}, figsize=(20, 12))
+ax[0].scatter(left_pointcloud[:, 0], left_pointcloud[:, 1], left_pointcloud[:, 2],label='Actual')
+ax[0].scatter(left_pointcloud_pred[:, 0], left_pointcloud_pred[:, 1], left_pointcloud_pred[:, 2],label='Predicted')
+ax[0].set_title('Left Pointcloud')
+ax[0].set_xlim(-lim,lim)
+ax[0].set_ylim(-lim,lim)
+ax[0].set_zlim(-lim,lim)
+ax[1].scatter(right_pointcloud[:, 0], right_pointcloud[:, 1], right_pointcloud[:, 2],label='Actual')
+ax[1].scatter(right_pointcloud_pred[:, 0], right_pointcloud_pred[:, 1], right_pointcloud_pred[:, 2],label='Predicted')
+ax[1].set_title('Right Pointcloud')
+ax[1].set_xlim(-lim,lim)
+ax[1].set_ylim(-lim,lim)
+ax[1].set_zlim(-lim,lim)
+ax[2].plot(zs=np.arange(len(losses)),xs=losses,ys=losses)
+ax[2].set_title('Loss Curve')
 plt.show()
-
-

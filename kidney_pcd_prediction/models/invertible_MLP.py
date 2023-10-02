@@ -10,6 +10,8 @@ from kidney_pcd_prediction.models.invertible_mlp_layers import AdditiveCouplingL
 #                     allowed variable depth of model
 # from paper: https://arxiv.org/pdf/1410.8516.pdf
 
+#Performance is *so* much better when number of intermediate layers is 0
+
 def _build_relu_network(latent_dim, hidden_dim, num_hidden_layers):
     """Helper function to construct a ReLU network of varying number of layers."""
     if num_hidden_layers == 0 or hidden_dim == 0:
