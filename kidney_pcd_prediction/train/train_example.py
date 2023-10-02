@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from kidney_pcd_prediction.models.invertible_MLP import NICEModel
+from kidney_pcd_prediction.models.SimpleMLP import MLP
 from kidney_pcd_prediction.dataloader.pointcloud_dataloader import PointcloudDataset
 import numpy as np
 import os
@@ -19,7 +20,7 @@ torch.manual_seed(0)
 np.random.seed(0)
 
 # set hyperparameters
-n_epochs = 100
+n_epochs = 10000
 lr = 5e-5
 n_points = 500
 depth = 10
@@ -33,14 +34,14 @@ dataset = PointcloudDataset(filepath)
 dataloader = DataLoader(dataset,batch_size=len(dataset),shuffle=False)
 
 # create model
-model = NICEModel(n_points*3,depth,dropout=dropout).cuda()
+model = MLP(n_points,depth,dropout=dropout).cuda()
 print(model.layers)
 
 # create optimizer
 optimizer = optim.Adam(model.parameters(),lr=lr)
 
 # create loss function
-loss_fn = nn.HuberLoss()
+loss_fn = nn.MSELoss()
 
 # create directory to save models
 if not os.path.exists('models'):
@@ -57,13 +58,12 @@ for epoch in range(n_epochs):
         loss.backward()
         optimizer.step()
         print('\rEpoch: {}, Batch: {}, Loss: {}'.format(epoch,i,loss.item()),end='')
-    torch.save(model.state_dict(),'models/NICE_model_epoch_{}.pt'.format(epoch))
 
 # test invertibility post-training for sanity check
-model.eval()
-print(model)
-random = torch.rand((1, 1500)).cuda()
-out = model(random)
-inv_in = model.inverse(out)
-diff = torch.sum(torch.abs(inv_in-random)).item()
-print(diff)
+# model.eval()
+# print(model)
+# random = torch.rand((1, 1500)).cuda()
+# out = model(random)
+# inv_in = model.inverse(out)
+# diff = torch.sum(torch.abs(inv_in-random)).item()
+# print(diff)

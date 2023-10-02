@@ -33,13 +33,13 @@ class NICEModel(nn.Module):
     * a diagonal scaling matrix output layer
     """
 
-    def __init__(self, input_dim, num_layers, hidden_dim=0,
+    def __init__(self, num_points, num_layers, hidden_dim=0,
                  num_hidden_layers=0, dropout=0.9):
         super(NICEModel, self).__init__()
-        assert (input_dim % 2 == 0), "[NICEModel] only even input dimensions supported for now"
+        assert (num_points % 2 == 0), "[NICEModel] only even input dimensions supported for now"
         assert(num_layers >= 3), "[NICEModel] num_layers must be above 2"
-        self.input_dim = input_dim
-        half_dim = int(input_dim / 2)
+        self.input_dim = num_points*3
+        half_dim = int(self.input_dim / 2)
         self.dropout = nn.Dropout(dropout)
         self.num_hidden = num_hidden_layers
         self.layers = []
@@ -47,13 +47,13 @@ class NICEModel(nn.Module):
         is_odd = True
         for i in range(num_layers):
             if is_odd:
-                self.layers.append(AdditiveCouplingLayer(input_dim, 'odd', _build_relu_network(half_dim, hidden_dim, self.num_hidden)))
+                self.layers.append(AdditiveCouplingLayer(self.input_dim, 'odd', _build_relu_network(half_dim, hidden_dim, self.num_hidden)))
             else:
-                self.layers.append(AdditiveCouplingLayer(input_dim, 'even', _build_relu_network(half_dim, hidden_dim, self.num_hidden)))
+                self.layers.append(AdditiveCouplingLayer(self.input_dim, 'even', _build_relu_network(half_dim, hidden_dim, self.num_hidden)))
             is_odd = not is_odd
 
         self.layers = nn.Sequential(*self.layers)
-        self.scaling_diag = nn.Parameter(torch.ones(input_dim))
+        self.scaling_diag = nn.Parameter(torch.ones(self.input_dim))
 
         # randomly initialize weights:
         for layer in self.layers:
