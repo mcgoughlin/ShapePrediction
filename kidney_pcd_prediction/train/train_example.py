@@ -28,6 +28,13 @@ num_hidden_layers = 0
 depth = 4
 dropout = 0.95
 
+if torch.cuda.is_available():
+    dev = "cuda:0"
+elif torch.backends.mps.is_available():
+    dev = "mps"
+else:
+    dev = "cpu"
+
 # set filepath
 filepath = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/aligned_pointclouds'
 
@@ -36,14 +43,14 @@ dataset = PointcloudDataset(filepath)
 dataloader = DataLoader(dataset,batch_size=len(dataset),shuffle=False)
 
 # create model
-model = NICEModel(n_points,depth,dropout=dropout,hidden_dim=hidden_dim,num_hidden_layers=num_hidden_layers).cuda()
+model = NICEModel(n_points,depth,dropout=dropout,hidden_dim=hidden_dim,num_hidden_layers=num_hidden_layers).to(dev)
 print(model.layers)
 
 # create optimizer
 optimizer = optim.Adam(model.parameters(),lr=lr)
 
 # create loss function
-loss_fn = nn.MSELoss()
+loss_fn = nn.MSELoss().to(dev)
 
 # create directory to save models
 if not os.path.exists('models'):
@@ -52,7 +59,7 @@ if not os.path.exists('models'):
 # test invertibility post-training for sanity check
 model.eval()
 print(model)
-random = torch.rand((1, 1500)).cuda()
+random = torch.rand((1, 1500)).to(dev)
 out = model(random)
 inv_in = model.inverse(out)
 diff = torch.sum(torch.abs(inv_in-random)).item()
@@ -64,8 +71,8 @@ losses = []
 for epoch in range(n_epochs):
     for i,(x,lb) in enumerate(dataloader):
         optimizer.zero_grad()
-        x = x.cuda()
-        lb = lb.cuda()
+        x = x.to(dev)
+        lb = lb.to(dev)
         out = model(x)
         loss = loss_fn(out,lb)
         losses.append(loss.item())
