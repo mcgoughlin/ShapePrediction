@@ -20,13 +20,15 @@ torch.manual_seed(0)
 np.random.seed(0)
 
 # set hyperparameters
-n_epochs = 1000
+n_epochs = 300
 lr = 5e-4
 n_points = 500
 hidden_dim = n_points
 num_hidden_layers = 0
+batch_size = 32
 depth = 4
 dropout = 0.95
+train_split = 0.8
 
 if torch.cuda.is_available():
     dev = "cuda:0"
@@ -40,7 +42,12 @@ filepath = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/aligned_pointclouds'
 
 # create dataloader
 dataset = PointcloudDataset(filepath)
-dataloader = DataLoader(dataset,batch_size=len(dataset),shuffle=False)
+# split dataset into train and test
+train_size = int(train_split*len(dataset))
+test_size = len(dataset) - train_size
+train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+dataloader = DataLoader(train_dataset,batch_size=batch_size,shuffle=True)
+test_dataloader = DataLoader(test_dataset,batch_size=1,shuffle=True)
 
 # create model
 model = NICEModel(n_points,depth,dropout=dropout,hidden_dim=hidden_dim,num_hidden_layers=num_hidden_layers).to(dev)
@@ -56,9 +63,9 @@ loss_fn = nn.MSELoss().to(dev)
 if not os.path.exists('models'):
     os.mkdir('models')
 
-# test invertibility post-training for sanity check
+# test invertibility pre-training for sanity check
 model.eval()
-print(model)
+print('Testing invertibility pre-training')
 random = torch.rand((1, 1500)).to(dev)
 out = model(random)
 inv_in = model.inverse(out)
@@ -79,6 +86,33 @@ for epoch in range(n_epochs):
         loss.backward()
         optimizer.step()
         print('\rEpoch: {}, Batch: {}, Loss: {}'.format(epoch,i,loss.item()),end='')
+
+# find average loss and distance between input and output pointclouds
+model.eval()
+test_losses, test_diffs = [],[]
+for i,(x,lb) in enumerate(test_dataloader):
+    x = x.to(dev)
+    lb = lb.to(dev)
+    out = model(x)
+    loss = loss_fn(out, lb)
+    test_losses.append(loss.item())
+    test_diffs.append(torch.sum(torch.abs(out-lb)).item())
+
+print('\nAverage test loss: {}'.format(np.mean(test_losses)))
+print('Average test diff for whole pointcloud: {}'.format(np.mean(test_diffs)))
+# print average test difference for each point, as fraction of pointcloud size
+print('Average test diff for each point: {}'.format(np.mean(test_diffs)/n_points))
+
+
+
+# test invertibility post-training for sanity check
+model.eval()
+print('post-training invertibility test')
+random = torch.rand((1, 1500)).to(dev)
+out = model(random)
+inv_in = model.inverse(out)
+diff = torch.sum(torch.abs(inv_in-random)).item()
+print(diff)
 
 #plot moving average of loss curve, and an input / output pointcloud pair
 # extract left and right average pointclouds from the dataset
