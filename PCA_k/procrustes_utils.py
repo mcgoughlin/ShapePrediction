@@ -103,7 +103,7 @@ def procrustes_analysis(target_points, reference_pointclouds, include_target=Tru
     icp_criteria = o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=max_iterations,
                                                                      relative_fitness=tolerance,
                                                                      relative_rmse=tolerance)
-
+    time.sleep(1)
     for i in tqdm(range(len(reference_pointclouds))):
         source_cloud = reference_pointclouds[i]
         reg_p2p = o3d.pipelines.registration.registration_icp(

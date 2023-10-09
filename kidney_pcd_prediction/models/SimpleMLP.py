@@ -22,6 +22,6 @@ class MLP(nn.Module):
         for i in range(self.depth):
             x = self.layers[i](x)
             x = F.relu(x)
-            x = F.dropout(x,self.dropout)
+            # x = F.dropout(x,self.dropout)
         x = self.layers[-1](x)
         return x

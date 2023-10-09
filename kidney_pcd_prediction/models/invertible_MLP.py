@@ -5,7 +5,6 @@ from kidney_pcd_prediction.models.invertible_mlp_layers import AdditiveCouplingL
 
 # adapted from https://github.com/paultsw/nice_pytorch/blob/master/nice/models.py
 # changes were made: removed exponential scaling for loss stability.
-#                     removed batch norm layers - replaced for instance norm layers - improves loss stability
 #                     allowed intermediary layers to be of varying depth
 #                     allowed variable depth of model
 # from paper: https://arxiv.org/pdf/1410.8516.pdf
@@ -15,13 +14,14 @@ from kidney_pcd_prediction.models.invertible_mlp_layers import AdditiveCouplingL
 def _build_relu_network(latent_dim, hidden_dim, num_hidden_layers):
     """Helper function to construct a ReLU network of varying number of layers."""
     if num_hidden_layers == 0 or hidden_dim == 0:
-        return nn.Sequential(nn.Linear(latent_dim, latent_dim),nn.ReLU(), nn.BatchNorm1d(latent_dim))
+        return nn.Sequential(nn.Linear(latent_dim, latent_dim), nn.ReLU())
 
     _modules = [nn.Linear(latent_dim, hidden_dim)]
     for _ in range(num_hidden_layers):
         _modules.append(nn.Linear(hidden_dim, hidden_dim))
         _modules.append(nn.ReLU())
-        _modules.append(nn.InstanceNorm1d(hidden_dim))
+        # _modules.append(nn.InstanceNorm1d(hidden_dim))
+
     _modules.append(nn.Linear(hidden_dim, latent_dim))
     return nn.Sequential(*_modules)
 
@@ -59,7 +59,6 @@ class NICEModel(nn.Module):
             is_odd = not is_odd
 
         self.layers = nn.Sequential(*self.layers)
-        self.scaling_diag = nn.Parameter(torch.ones(self.input_dim))
 
         # randomly initialize weights:
         for layer in self.layers:
@@ -81,14 +80,12 @@ class NICEModel(nn.Module):
         """
         for i in range(len(self.layers)):
             xs = self.layers[i](xs)
-            xs = self.dropout(xs)
-        ys = torch.matmul(xs, torch.diag(self.scaling_diag))
-        return ys
+            # xs = self.dropout(xs)
+        return xs
 
-    def inverse(self, ys):
+    def inverse(self, xs):
         """Invert a set of draws from gaussians"""
         with torch.no_grad():
-            xs = torch.matmul(ys, torch.diag(torch.reciprocal(self.scaling_diag)))
             for i in range(len(self.layers)):
                 xs = self.layers[-1*(1+i)].inverse(xs)
         return xs
