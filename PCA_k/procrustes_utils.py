@@ -92,7 +92,7 @@ def process_dataframe(df, obj_folder, number_of_points=1000):
 
 
 def procrustes_analysis(target_points, reference_pointclouds, include_target=True,
-                        max_iterations=20000, tolerance=1e-7):
+                        max_iterations=20000, tolerance=1e-7,return_transformations=False):
     aligned_pointclouds = []
 
     target_cloud = o3d.geometry.PointCloud()
@@ -104,14 +104,22 @@ def procrustes_analysis(target_points, reference_pointclouds, include_target=Tru
                                                                      relative_fitness=tolerance,
                                                                      relative_rmse=tolerance)
     time.sleep(1)
+    if return_transformations:
+        transformations = []
+
     for i in tqdm(range(len(reference_pointclouds))):
         source_cloud = reference_pointclouds[i]
+        if isinstance(source_cloud,np.ndarray):
+            source_cloud = o3d.geometry.PointCloud()
+            source_cloud.points = o3d.utility.Vector3dVector(reference_pointclouds[i])
         reg_p2p = o3d.pipelines.registration.registration_icp(
             source_cloud, target_cloud,
             max_correspondence_distance=1000,
             estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(),
             criteria=icp_criteria
         )
+        if return_transformations:
+            transformations.append(reg_p2p.transformation)
         source_cloud.transform(reg_p2p.transformation)
         pc = np.asarray(source_cloud.points)
         distances = cdist(target_cloud.points, pc)
@@ -121,7 +129,10 @@ def procrustes_analysis(target_points, reference_pointclouds, include_target=Tru
     aligned_pointclouds = np.array(aligned_pointclouds)
     average_pointcloud = np.mean(aligned_pointclouds, axis=0)
 
-    return average_pointcloud, aligned_pointclouds
+    if return_transformations:
+        return average_pointcloud, aligned_pointclouds, transformations
+    else:
+        return average_pointcloud, aligned_pointclouds
 
 
 def procrustes_analysis_normalised(target_points, reference_pointclouds, include_target=True,

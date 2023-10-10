@@ -84,16 +84,12 @@ if __name__ == "__main__":
                                  average_pointcloud[:,1] + component_of_variation[:,1],
                                  average_pointcloud[:,2] + component_of_variation[:,2])
             return graphs
+
+
         def on_move(event):
-            if event.inaxes == ax[1]:
-                ax[0].view_init(elev=ax[1].elev, azim=ax[1].azim)
-                ax[2].view_init(elev=ax[1].elev, azim=ax[1].azim)
-            elif event.inaxes == ax[0]:
-                ax[1].view_init(elev=ax[0].elev, azim=ax[0].azim)
-                ax[2].view_init(elev=ax[0].elev, azim=ax[0].azim)
-            else:
-                ax[1].view_init(elev=ax[2].elev, azim=ax[2].azim)
-                ax[0].view_init(elev=ax[2].elev, azim=ax[2].azim)
+            for i in range(visualise_component):
+                ax[i].elev = event.inaxes.elev
+                ax[i].azim = event.inaxes.azim
             fig.canvas.draw_idle()
 
         animations.append(animation.FuncAnimation(fig, update_graph, animation_frames,interval=40, blit=False))
