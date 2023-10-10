@@ -10,12 +10,12 @@ if __name__ == "__main__":
     # obj_folder = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/cleaned_objs'
     obj_folder = '/media/mcgoug01/nvme/ThirdYear/kits23sncct_objdata/cleaned_objs'
     features_csv_fp = '/media/mcgoug01/nvme/ThirdYear/kits23sncct_objdata/features_labelled.csv'
-    number_of_points = 200
+    number_of_points = 1000
     n_iter = 20000
     tolerance = 1e-7
     n_components = 10
-    visualise_compontents=3
-    percentile_principal_comp_variation = 95
+    visualise_component=3
+    percentile_principal_comp_variation = 99
     kernel = 'sigmoid'
 
     animation_frames = 20
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     data = []
 
-    for df, side in zip([df_left,df_right],['left','right']):
+    for df, side in zip([df_left,df_right],['Left','Right']):
         entry = {'position':side}
         average_pointcloud,aligned_pointclouds = find_average(df, obj_folder,number_of_points, n_iter, tolerance)
         aligned_shape = aligned_pointclouds.shape
@@ -53,31 +53,50 @@ if __name__ == "__main__":
         # plot the average point cloud and +/- 1 standard deviation of the first 2 components, where the central plot is just the average point cloud
         # in a 3x3 grid
         lim = np.abs(average_pointcloud).max()*1.1
-
-        for component_index in range(1,visualise_compontents+1):
-            index = np.argsort(pca.eigenvalues_)[-component_index]
+        fig, ax = plt.subplots(1, visualise_component, subplot_kw={'projection': '3d'}, figsize=(20, 12))
+        #reduce gaps between subplots
+        plt.subplots_adjust(wspace=0, hspace=0)
+        fig.suptitle('Principal Components of {} Kidney'.format(side))
+        graphs = []
+        animations = []
+        eigen_pairs = []
+        for component_index in range(0, visualise_component):
+            index = np.argsort(pca.eigenvalues_)[-(component_index+1)]
             eigenvalue = pca.eigenvalues_[index]
             eigenvector = pca.eigenvectors_[:,index].reshape((aligned_shape[1],aligned_shape[2]))
-
-            fig = plt.figure(figsize=(10, 10))
-            ax = fig.add_subplot(111, projection='3d')
-            title = ax.set_title('{} kidney, PC {} of {}'.format(side,component_index,visualise_compontents))
+            eigen_pairs.append((eigenvalue,eigenvector))
+            # create figure with 3 subplots in one row with a 3d projection
+            title = ax[component_index].set_title('PC {} of {}'.format(component_index + 1, visualise_component))
             lim = np.abs(average_pointcloud).max()*1.1
-            graph = ax.scatter(average_pointcloud[:,0], average_pointcloud[:,1], average_pointcloud[:,2])
+            graphs.append(ax[component_index].scatter(average_pointcloud[:,0], average_pointcloud[:,1], average_pointcloud[:,2]))
             #set the axes properties
-            ax.set_xlim3d(-lim, lim)
-            ax.set_ylim3d(-lim, lim)
-            ax.set_zlim3d(-lim, lim)
+            ax[component_index].set_xlim3d(-lim, lim)
+            ax[component_index].set_ylim3d(-lim, lim)
+            ax[component_index].set_zlim3d(-lim, lim)
             sin_curve = np.sin(2*np.pi*np.linspace(0.0000001, 1, animation_frames))
-            def update_graph(num):
-                alternating_mag = sin_curve[num]
+
+        def update_graph(num):
+            alternating_mag = sin_curve[num]
+            for i in range(visualise_component):
+                eigenvalue,eigenvector = eigen_pairs[i]
                 component_of_variation = eigenvector * np.sqrt(eigenvalue) * alternating_mag * norm.ppf(percentile_principal_comp_variation / 100)  # multiplies eigenvector by the std dev. corresponding to previously defined percentile
-                graph._offsets3d = (average_pointcloud[:,0] + component_of_variation[:, 0],
+                graphs[i]._offsets3d = (average_pointcloud[:,0] + component_of_variation[:, 0],
                                  average_pointcloud[:,1] + component_of_variation[:,1],
                                  average_pointcloud[:,2] + component_of_variation[:,2])
-                return graph
+            return graphs
+        def on_move(event):
+            if event.inaxes == ax[1]:
+                ax[0].view_init(elev=ax[1].elev, azim=ax[1].azim)
+                ax[2].view_init(elev=ax[1].elev, azim=ax[1].azim)
+            elif event.inaxes == ax[0]:
+                ax[1].view_init(elev=ax[0].elev, azim=ax[0].azim)
+                ax[2].view_init(elev=ax[0].elev, azim=ax[0].azim)
+            else:
+                ax[1].view_init(elev=ax[2].elev, azim=ax[2].azim)
+                ax[0].view_init(elev=ax[2].elev, azim=ax[2].azim)
+            fig.canvas.draw_idle()
 
-            ani = animation.FuncAnimation(fig, update_graph, animation_frames,
-                                                     interval=40, blit=False)
+        animations.append(animation.FuncAnimation(fig, update_graph, animation_frames,interval=40, blit=False))
+        c1 = fig.canvas.mpl_connect('motion_notify_event', on_move)
 
-            plt.show(block=True)
+        plt.show(block=True)
