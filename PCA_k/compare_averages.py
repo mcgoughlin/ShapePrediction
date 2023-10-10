@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     #rigid alignment of the right kidney average pointcloud to the left kidney average pointcloud
     _, aligned_lr,transforms = procrustes_analysis(average_pointclouds[0], average_pointclouds, include_target=False,return_transformations=True)
-
+    print(transforms)
     #calculate maximum diameter of the left and right average pointclouds
     max_diameter = np.max([np.linalg.norm(aligned_lr[0][i] - aligned_lr[0][j]) for i in range(len(aligned_lr[0])) for j in range(len(aligned_lr[0]))])
     av_diff = chamfer_distance(aligned_lr[0],aligned_lr[1])
