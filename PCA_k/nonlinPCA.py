@@ -9,19 +9,20 @@ if __name__ == "__main__":
     # obj_folder = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/cleaned_objs'
     obj_folder = '/media/mcgoug01/nvme/ThirdYear/kits23sncct_objdata/cleaned_objs'
     features_csv_fp = '/media/mcgoug01/nvme/ThirdYear/kits23sncct_objdata/features_labelled.csv'
-    number_of_points = 1000
+    number_of_points = 100
     n_iter = 20000
     tolerance = 1e-7
     n_components = 10
-    visualise_compontents=4
+    visualise_compontents=3
     percentile_principal_comp_variation = 95
+    kernel = 'sigmoid'
 
     df = pd.read_csv(features_csv_fp)
 
     # Select rows where all cyst and cancer measurements are 0
     columns_to_check = ['cyst_{}_vol'.format(i) for i in range(10)] + ['cancer_{}_vol'.format(i) for i in range(10)]
     df = df[df[columns_to_check].sum(axis=1) == 0]
-    pca = PCA(kernel = 'rbf', n_components=n_components)
+    pca = PCA(kernel = kernel, n_components=n_components)
     # extract case and kidney position data, split between left and right
     df = df[['case', 'position']]
     df_left = df.loc[df['position'] == 'left']
@@ -56,7 +57,7 @@ if __name__ == "__main__":
             index = np.argsort(pca.eigenvalues_)[-component_index]
             eigenvalue = pca.eigenvalues_[index]
             eigenvector = pca.eigenvectors_[:,index].reshape((aligned_shape[1],aligned_shape[2]))
-            component_of_variation = eigenvector * np.sqrt(eigenvalue) * norm.ppf(percentile_principal_comp_variation / 100) # 95th percentile
+            component_of_variation = eigenvector * np.sqrt(eigenvalue) * norm.ppf(percentile_principal_comp_variation / 100) # multiplies eigenvector by the std dev. corresponding to previously defined percentile
             colour_one = np.linalg.norm(component_of_variation,axis=1)
             colour_two = np.linalg.norm(component_of_variation,axis=1)*-1
 

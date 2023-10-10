@@ -22,7 +22,7 @@ np.random.seed(2)
 # set hyperparameters
 n_epochs = 2000
 lr = 5e-3
-n_points = 500
+n_points = 100
 hidden_dim = 0
 num_hidden_layers = 0
 depth = 5
