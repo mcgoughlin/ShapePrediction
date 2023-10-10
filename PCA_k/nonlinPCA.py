@@ -3,19 +3,22 @@ from PCA_k.procrustes_utils import find_average
 import numpy as np
 from sklearn.decomposition import KernelPCA as PCA
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from scipy.stats import norm
 
 if __name__ == "__main__":
     # obj_folder = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/cleaned_objs'
     obj_folder = '/media/mcgoug01/nvme/ThirdYear/kits23sncct_objdata/cleaned_objs'
     features_csv_fp = '/media/mcgoug01/nvme/ThirdYear/kits23sncct_objdata/features_labelled.csv'
-    number_of_points = 100
+    number_of_points = 200
     n_iter = 20000
     tolerance = 1e-7
     n_components = 10
     visualise_compontents=3
     percentile_principal_comp_variation = 95
     kernel = 'sigmoid'
+
+    animation_frames = 20
 
     df = pd.read_csv(features_csv_fp)
 
@@ -52,41 +55,29 @@ if __name__ == "__main__":
         lim = np.abs(average_pointcloud).max()*1.1
 
         for component_index in range(1,visualise_compontents+1):
-            fig, ax = plt.subplots(1, 3, subplot_kw={'projection': '3d'}, figsize=(20, 12))
-            plt.subplots_adjust(wspace=0, hspace=0)
             index = np.argsort(pca.eigenvalues_)[-component_index]
             eigenvalue = pca.eigenvalues_[index]
             eigenvector = pca.eigenvectors_[:,index].reshape((aligned_shape[1],aligned_shape[2]))
-            component_of_variation = eigenvector * np.sqrt(eigenvalue) * norm.ppf(percentile_principal_comp_variation / 100) # multiplies eigenvector by the std dev. corresponding to previously defined percentile
-            colour_one = np.linalg.norm(component_of_variation,axis=1)
-            colour_two = np.linalg.norm(component_of_variation,axis=1)*-1
 
-            ax[0].scatter(average_pointcloud[:,0]+component_of_variation[:,0], average_pointcloud[:,1]+component_of_variation[:,1],
-                              average_pointcloud[:,2]+component_of_variation[:,2],c=colour_one,vmin=colour_two.min(),vmax=colour_one.max())
+            fig = plt.figure(figsize=(10, 10))
+            ax = fig.add_subplot(111, projection='3d')
+            title = ax.set_title('{} kidney, PC {} of {}'.format(side,component_index,visualise_compontents))
+            lim = np.abs(average_pointcloud).max()*1.1
+            graph = ax.scatter(average_pointcloud[:,0], average_pointcloud[:,1], average_pointcloud[:,2])
+            #set the axes properties
+            ax.set_xlim3d(-lim, lim)
+            ax.set_ylim3d(-lim, lim)
+            ax.set_zlim3d(-lim, lim)
+            sin_curve = np.sin(2*np.pi*np.linspace(0.0000001, 1, animation_frames))
+            def update_graph(num):
+                alternating_mag = sin_curve[num]
+                component_of_variation = eigenvector * np.sqrt(eigenvalue) * alternating_mag * norm.ppf(percentile_principal_comp_variation / 100)  # multiplies eigenvector by the std dev. corresponding to previously defined percentile
+                graph._offsets3d = (average_pointcloud[:,0] + component_of_variation[:, 0],
+                                 average_pointcloud[:,1] + component_of_variation[:,1],
+                                 average_pointcloud[:,2] + component_of_variation[:,2])
+                return graph
 
-            ax[1].scatter(average_pointcloud[:, 0], average_pointcloud[:, 1],
-                               average_pointcloud[:, 2])
+            ani = animation.FuncAnimation(fig, update_graph, animation_frames,
+                                                     interval=40, blit=False)
 
-            ax[2].scatter(average_pointcloud[:,0]-component_of_variation[:,0], average_pointcloud[:,1]-component_of_variation[:,1],
-                              average_pointcloud[:,2]-component_of_variation[:,2],c=colour_two,vmin=colour_two.min(),vmax=colour_one.max())
-            for j in range(3):
-                ax[j].set_xlim(-lim, lim)
-                ax[j].set_ylim(-lim, lim)
-                ax[j].set_zlim(-lim, lim)
-                ax[j].view_init(-20, 45)
-
-            def on_move(event):
-                if event.inaxes == ax[1]:
-                    ax[0].view_init(elev=ax[1].elev, azim=ax[1].azim)
-                    ax[2].view_init(elev=ax[1].elev, azim=ax[1].azim)
-                elif event.inaxes == ax[0]:
-                    ax[1].view_init(elev=ax[0].elev, azim=ax[0].azim)
-                    ax[2].view_init(elev=ax[0].elev, azim=ax[0].azim)
-                else:
-                    ax[1].view_init(elev=ax[2].elev, azim=ax[2].azim)
-                    ax[0].view_init(elev=ax[2].elev, azim=ax[2].azim)
-                fig.canvas.draw_idle()
-
-            fig.suptitle(side+' kidney, component '+str(component_index),fontsize=20)
-            c1 = fig.canvas.mpl_connect('motion_notify_event', on_move)
             plt.show(block=True)
