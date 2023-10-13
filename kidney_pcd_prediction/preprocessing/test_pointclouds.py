@@ -10,7 +10,7 @@ average_right_pointcloud = np.load(path + '/average_right.npy')
 
 left_pointcloud1 = np.load(path + '/left/10.npy')
 left_pointcloud2 = np.load(path + '/left/11.npy')
-left_pointcloud23 = np.load(path + '/left/15.npy')
+left_pointcloud3 = np.load(path + '/left/15.npy')
 
 # plot left point clouds and mark 3 random points with different colours that match between the two point clouds
 
@@ -40,13 +40,13 @@ ax2.scatter(left_pointcloud2[:,0],left_pointcloud2[:,1],left_pointcloud2[:,2],la
 #plot the average pointcloud
 ax3.scatter(average_left_pointcloud[:,0],average_left_pointcloud[:,1],average_left_pointcloud[:,2],label='Average')
 #plot the third pointcloud
-ax3.scatter(left_pointcloud23[:,0],left_pointcloud23[:,1],left_pointcloud23[:,2],label='Pointcloud 3')
+ax3.scatter(left_pointcloud3[:,0],left_pointcloud3[:,1],left_pointcloud3[:,2],label='Pointcloud 3')
 
 # loop through the plots and highlight 3 random points in each plot
-random_point_indices = np.random.randint(0,200,3)
+random_point_indices = np.random.randint(0,len(left_pointcloud2),3)
 #generate three different colours for each point
 colors = ['red','blue','green']
-for ax,pc in zip([ax1,ax2,ax3],[left_pointcloud1,left_pointcloud2,left_pointcloud23]):
+for ax,pc in zip([ax1,ax2,ax3],[left_pointcloud1,left_pointcloud2,left_pointcloud3]):
     ax.scatter(pc[random_point_indices,0],pc[random_point_indices,1],pc[random_point_indices,2],label='Random Points',color=colors,s=100)
     #plot these points as black dots on the average pointcloud
     ax.scatter(average_left_pointcloud[random_point_indices,0],average_left_pointcloud[random_point_indices,1],average_left_pointcloud[random_point_indices,2],label='Random Points',color='black',s=100)

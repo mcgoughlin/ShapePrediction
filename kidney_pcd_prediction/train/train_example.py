@@ -9,6 +9,21 @@ from kidney_pcd_prediction.dataloader.pointcloud_dataloader import PointcloudDat
 import numpy as np
 import os
 
+class WeightRegularizer(nn.Module):
+    def __init__(self,quantile=0.95,scale = 0.001):
+        super(WeightRegularizer,self).__init__()
+        self.quantile=quantile
+        self.scale= scale
+
+    def forward(self,model):
+        reg = 0
+        for param in model.parameters():
+            # add the self.quantile percentile of the absolute value of each row in the weights to the regularisation term
+            if len(param.shape) == 2:
+                reg += (torch.quantile(torch.sum(torch.abs(param), dim=1), self.quantile))**3/param.shape[0]
+        return reg*self.scale
+
+
 # this script trains the NICE model on the CTORG dataset
 # it takes as input a filepath for folders containing npy files of left kidney pointclouds and right kidney pointclouds
 # it outputs a trained NICE model
@@ -20,15 +35,17 @@ torch.manual_seed(2)
 np.random.seed(2)
 
 # set hyperparameters
-n_epochs = 100000
-lr = 5e-3
-n_points = 200
+n_epochs = 20000
+lr = 2e-4
+n_points = 500
 hidden_dim = 0
 num_hidden_layers = 0
-depth = 1
+depth = 3
 train_split = 0.8
 invertible = False
 test_interval = 100
+weight_reg_quantile = 0.99
+reg_scale = 0.001
 
 if torch.cuda.is_available():
     dev = "cuda:0"
@@ -49,6 +66,8 @@ train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size
 dataloader = DataLoader(train_dataset,batch_size=train_size,shuffle=True)
 test_dataloader = DataLoader(test_dataset,batch_size=test_size,shuffle=True)
 
+# create weight regularizer class
+
 # create model
 if invertible:
     model = NICEModel(n_points,depth,hidden_dim=hidden_dim,num_hidden_layers=num_hidden_layers).to(dev)
@@ -57,11 +76,11 @@ else:
 print(model.layers)
 
 # create optimizer
-optimizer = optim.Adam(model.parameters(),lr=lr,weight_decay=1e-5)
+optimizer = optim.Adam(model.parameters(),lr=lr)
 
 # create loss function
-loss_fn = nn.MSELoss().to(dev)
-
+loss_fn = nn.L1Loss().to(dev)
+reg = WeightRegularizer(weight_reg_quantile,reg_scale).to(dev)
 # create directory to save models
 if not os.path.exists('models'):
     os.mkdir('models')
@@ -78,12 +97,14 @@ for epoch in range(n_epochs):
         lb = lb.to(dev)
         out = model(x)
         loss = loss_fn(out,lb)
+        # rl = reg(model)
+        # loss += rl
         losses.append(loss.item())
         loss.backward()
         optimizer.step()
         train_diffs.append(torch.sum(torch.abs(out-lb)).item()/(n_points*3*len(lb)))
+        # print('\rEpoch: {}, Batch: {}, Loss: {}, Regularizer loss: {}'.format(epoch,i,loss.item(),rl.item()),end='')
         print('\rEpoch: {}, Batch: {}, Loss: {}'.format(epoch,i,loss.item()),end='')
-
     #calculate validation loss
     if epoch % test_interval == 0 and epoch != 0:
         model.eval()
@@ -92,11 +113,12 @@ for epoch in range(n_epochs):
             lbt = lbt.to(dev)
             outt = model(xt)
             loss = loss_fn(outt, lbt)
+
             test_losses.append(loss.item())
             test_diffs.append(torch.sum(torch.abs(outt-lbt)).item()/(n_points*3*len(lbt)))
             test_lb.append(lbt.cpu().detach())
             test_difftoavg.append(torch.sum(torch.abs(lbt)).item()/(n_points*3*len(lbt)))
-        print('\nAverage test loss: {}'.format(np.mean(test_losses)))
+        print('\nAverage test loss: {}'.format(np.mean(test_losses[-1])))
         # print average test difference for each point, as fraction of pointcloud size
         print('Average distance from label to test pred for each point: {}'.format(test_diffs[-1]))
         print('Average distance from label to average pointcloud for each point: {}'.format(test_difftoavg[-1]))
@@ -108,7 +130,7 @@ import matplotlib.pyplot as plt
 fig2 = plt.figure(figsize=(10, 10))
 plt.plot(np.arange(1,len(test_diffs)+1)*test_interval, test_diffs,label='Test')
 plt.plot(np.arange(1,len(test_difftoavg)+1)*test_interval, test_difftoavg,label='Just Using Average')
-plt.plot(np.arange(len(train_diffs)), train_diffs,label='Train')
+# plt.plot(np.arange(len(train_diffs)), train_diffs,label='Train')
 plt.title('Distance Curve')
 plt.xlabel('Epoch')
 plt.ylabel('Average distance from label to prediction for each point')

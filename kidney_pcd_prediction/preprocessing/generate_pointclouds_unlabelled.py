@@ -43,7 +43,7 @@ if __name__ == "__main__":
     features_csv_fp = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/features_unlabelled.csv'
 
     pointcloud_save_folder = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/aligned_pointclouds'
-    number_of_points = 200
+    number_of_points = 500
     n_iter = 10000
     tolerance = 1e-7
 
