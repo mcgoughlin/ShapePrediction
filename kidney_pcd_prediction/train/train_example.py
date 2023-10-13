@@ -20,15 +20,15 @@ torch.manual_seed(2)
 np.random.seed(2)
 
 # set hyperparameters
-n_epochs = 2000
+n_epochs = 100000
 lr = 5e-3
-n_points = 100
+n_points = 200
 hidden_dim = 0
 num_hidden_layers = 0
-depth = 5
+depth = 1
 train_split = 0.8
 invertible = False
-test_interval = 25
+test_interval = 100
 
 if torch.cuda.is_available():
     dev = "cuda:0"
@@ -60,7 +60,7 @@ print(model.layers)
 optimizer = optim.Adam(model.parameters(),lr=lr,weight_decay=1e-5)
 
 # create loss function
-loss_fn = nn.L1Loss().to(dev)
+loss_fn = nn.MSELoss().to(dev)
 
 # create directory to save models
 if not os.path.exists('models'):
@@ -112,7 +112,7 @@ plt.plot(np.arange(len(train_diffs)), train_diffs,label='Train')
 plt.title('Distance Curve')
 plt.xlabel('Epoch')
 plt.ylabel('Average distance from label to prediction for each point')
-plt.ylim(0,0.1)
+# plt.ylim(0,0.1)
 plt.legend()
 plt.show()
 

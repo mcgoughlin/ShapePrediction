@@ -1,5 +1,5 @@
 import pandas as pd
-from PCA_k.procrustes_utils import find_average_normalised
+from PCA_k.procrustes_utils import find_average
 import numpy as np
 import os
 
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     features_csv_fp = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/features_unlabelled.csv'
 
     pointcloud_save_folder = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/aligned_pointclouds'
-    number_of_points = 100
+    number_of_points = 200
     n_iter = 10000
     tolerance = 1e-7
 
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     for df, side in zip([df_left,df_right],['left','right']):
         entry = {'position':side}
         cases = df['case'].values
-        average_pointcloud,aligned_pointclouds = find_average_normalised(df, obj_folder,number_of_points, n_iter, tolerance)
+        average_pointcloud,aligned_pointclouds = find_average(df, obj_folder,number_of_points, n_iter, tolerance)
 
         # save aligned pointclouds
         save_aligned_pointclouds(aligned_pointclouds,cases,side,pointcloud_save_folder)
