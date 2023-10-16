@@ -45,6 +45,8 @@ if __name__ == "__main__":
     all_pcs = np.concatenate((pcs[0],rgt_pcs),axis=0)
     average_pointcloud, aligned_pointclouds = procrustes_analysis(average_pointcloud, all_pcs, include_target=False)
 
+    # save the average pointcloud
+    np.save('average_pointcloud.npy', average_pointcloud)
     aligned_shape = aligned_pointclouds.shape
     variance_point_clouds = np.array([pc - average_pointcloud for pc in aligned_pointclouds])
     variance_point_clouds = variance_point_clouds.reshape(variance_point_clouds.shape[0],-1).T

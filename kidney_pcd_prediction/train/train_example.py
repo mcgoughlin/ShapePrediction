@@ -35,17 +35,17 @@ torch.manual_seed(2)
 np.random.seed(2)
 
 # set hyperparameters
-n_epochs = 20000
-lr = 2e-4
+n_epochs = 30000
+lr = 5e-4
 n_points = 500
 hidden_dim = 0
 num_hidden_layers = 0
 depth = 3
 train_split = 0.8
+dropout=0.97
 invertible = False
 test_interval = 100
-weight_reg_quantile = 0.99
-reg_scale = 0.001
+weight_decay = 1e-5
 
 if torch.cuda.is_available():
     dev = "cuda:0"
@@ -70,17 +70,16 @@ test_dataloader = DataLoader(test_dataset,batch_size=test_size,shuffle=True)
 
 # create model
 if invertible:
-    model = NICEModel(n_points,depth,hidden_dim=hidden_dim,num_hidden_layers=num_hidden_layers).to(dev)
+    model = NICEModel(n_points,depth,hidden_dim=hidden_dim,num_hidden_layers=num_hidden_layers,dropout=dropout).to(dev)
 else:
-    model = MLP(n_points,depth).to(dev)
+    model = MLP(n_points,depth,dropout=dropout).to(dev)
 print(model.layers)
 
 # create optimizer
-optimizer = optim.Adam(model.parameters(),lr=lr)
+optimizer = optim.Adam(model.parameters(),lr=lr,weight_decay=weight_decay)
 
 # create loss function
 loss_fn = nn.L1Loss().to(dev)
-reg = WeightRegularizer(weight_reg_quantile,reg_scale).to(dev)
 # create directory to save models
 if not os.path.exists('models'):
     os.mkdir('models')
@@ -128,9 +127,9 @@ for epoch in range(n_epochs):
 import matplotlib.pyplot as plt
 
 fig2 = plt.figure(figsize=(10, 10))
-plt.plot(np.arange(1,len(test_diffs)+1)*test_interval, test_diffs,label='Test')
-plt.plot(np.arange(1,len(test_difftoavg)+1)*test_interval, test_difftoavg,label='Just Using Average')
-# plt.plot(np.arange(len(train_diffs)), train_diffs,label='Train')
+plt.plot(np.arange(1,len(test_diffs)+1)*test_interval, test_diffs,label='Test',s=4)
+plt.plot(np.arange(1,len(test_difftoavg)+1)*test_interval, test_difftoavg,label='Just Using Average',s=4)
+plt.plot(np.arange(len(train_diffs)), train_diffs,label='Train',s=1)
 plt.title('Distance Curve')
 plt.xlabel('Epoch')
 plt.ylabel('Average distance from label to prediction for each point')
