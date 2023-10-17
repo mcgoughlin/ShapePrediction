@@ -2,6 +2,7 @@ import pandas as pd
 from PCA_k.procrustes_utils import find_average, procrustes_analysis
 import numpy as np
 import os
+from sklearn.decomposition import KernelPCA as PCA
 
 #function save aligned pointsclouds as npy files, with a csv file containing the case and kidney position
 def save_aligned_pointclouds(aligned_pointclouds,cases,position,home_folder):
@@ -46,7 +47,11 @@ if __name__ == "__main__":
     number_of_points = 300
     n_iter = 10000
     tolerance = 1e-7
+    n_components = 10
+    keep_components = 3
+    kernel = 'sigmoid'
 
+    pca = PCA(kernel=kernel, n_components=n_components)
     df = pd.read_csv(features_csv_fp)
     columns_to_check = ['cyst_{}_vol'.format(i) for i in range(10)] + ['cancer_{}_vol'.format(i) for i in range(10)]
     df = df[df[columns_to_check].sum(axis=1) == 0]
@@ -58,11 +63,15 @@ if __name__ == "__main__":
     pcs = []
     data = []
 
-    for df, side in zip([df_left,df_right],['Left','Right']):
+    for df, side in zip([df_left,df_right],['left','right']):
         entry = {'position':side}
+        cases = df['case'].values
+
         average_pointcloud,aligned_pointclouds = find_average(df, obj_folder,number_of_points, n_iter, tolerance)
         #extend pcs list with the aligned pointclouds
         pcs.append(aligned_pointclouds)
+        save_aligned_pointclouds(aligned_pointclouds,cases,side,pointcloud_save_folder)
+
 
     #flip the right kidney pointclouds
     rgt_pcs = np.array([np.array([pc[:,0], pc[:,1],pc[:,2]*-1]).T for pc in pcs[1]])
@@ -72,5 +81,20 @@ if __name__ == "__main__":
 
     # save the average pointcloud and each aligned pointcloud
     np.save(pointcloud_save_folder + '/average_pointcloud.npy', average_pointcloud)
-    save_aligned_pointclouds(aligned_pointclouds,df['case'].values,'N/A',pointcloud_save_folder)
+    save_aligned_pointclouds(aligned_pointclouds, cases, side, pointcloud_save_folder)
+    aligned_shape = aligned_pointclouds.shape
+    variance_point_clouds = np.array([pc - average_pointcloud for pc in aligned_pointclouds])
+    variance_point_clouds = variance_point_clouds.reshape(variance_point_clouds.shape[0], -1).T
+    cov_matrix = np.cov(variance_point_clouds)
+    pca.fit(cov_matrix)
+
+    for component_index in range(keep_components):
+        index = np.argsort(pca.eigenvalues_)[-(component_index+1)]
+        eigenvalue = pca.eigenvalues_[index]
+        eigenvector = pca.eigenvectors_[:,index].reshape((aligned_shape[1],aligned_shape[2]))
+        eigenpair = np.array([eigenvalue,eigenvector],dtype=object)
+
+        np.save(pointcloud_save_folder + '/eigenpairs/eigenpair_{}.npy'.format(component_index),eigenpair)
+
+
 
