@@ -5,7 +5,7 @@ setup(
     packages=find_packages('PCA-k', exclude=['test']),
     install_requires=['matplotlib','numpy','scipy','pandas','open3d',
                       'scikit-learn','tqdm','torch','statsmodels',
-                      'nibabel','scikit-image','SimpleITK'],
+                      'nibabel','scikit-image','SimpleITK','seaborn'],
     python_requires='>=3.10',
     description='Python Package for finding the average kidney shapes',
     version='0.1',
