@@ -40,11 +40,19 @@ average_pointcloud = np.load(KIDNEY_AVERAGE_PATH)
 cancer_count = np.zeros_like(average_pointcloud)
 
 df = pd.read_csv(features_csv_fp)
-df = df[['case']]
-
-
+# find the largest cancer and cyst in each position ['left','right'] in each case and create a separate column to store this information
+# cancer and cyst columns are denoted by 'cancer_i_vol' and 'cyst_i_vol' where i is an index betwenn 0 and 9
+# if there are less than 10 cancers or cysts, the remaining columns are filled with 0
+#do not use 'slu' functions here
+cyst_cols = ['cyst_{}_vol'.format(i) for i in range(10)]
+cancer_cols = ['cancer_{}_vol'.format(i) for i in range(10)]
+df['max_cyst'] = df[cyst_cols].max(axis=1)
+df['max_cancer'] = df[cancer_cols].max(axis=1)
+df = df[['case','position','max_cyst','max_cancer']]
+results = []
 for case in df.case.unique():
     print('Processing case {}'.format(case))
+
     #extract voxel data
     im_nib = nib.load(os.path.join(CASE_IMAGE_PATH, case))
     lb_nib = nib.load(os.path.join(CASE_LABEL_PATH, case))
@@ -63,6 +71,7 @@ for case in df.case.unique():
     print(lb_data.shape, im_data.shape, lb_reshaped.shape,inf_npy.shape)
     # extract each kidney as a separate label
     kidneys = regionprops(spim.label(inf_npy)[0])
+    if len(kidneys) != 2: continue
     centroids = np.array([kidney.centroid for kidney in kidneys])
     bboxs = np.array([kidney.bbox for kidney in kidneys])
     spacing_axes = slu.find_orientation(spacing, centroids, is_axes = False)
@@ -83,12 +92,19 @@ for case in df.case.unique():
 
     # loop through each kidney side, centroid, and bbox
     for side, centroid, bbox in zip(['left', 'right'], [left_kidney_centroid, right_kidney_centroid], [left_kidney_bbox, right_kidney_bbox]):
+
+        largest_cancer = df.loc[df['case'] == case].loc[df['position'] == side]['max_cancer'].values[0]
+        largest_cyst = df.loc[df['case'] == case].loc[df['position'] == side]['max_cyst'].values[0]
         if side=='left': og_avg= average_pointcloud
         else: og_avg = np.array([average_pointcloud[:,0], average_pointcloud[:,1],average_pointcloud[:,2]*-1]).T
         # load pc
         pc_data = np.load(os.path.join(CASE_PC_PATH,side, case[:-7]+'.npy'.format(side)))
         #ensure pc_data and avg are aligned, and points have same anatomical meaning by index
         _, [pc_data,avg] = procrustes_analysis(pc_data, [pc_data,og_avg], include_target=False)
+        # centre both pointclouds on the origin
+        pc_data = pc_data - pc_data.mean(axis=0)
+        avg = avg - avg.mean(axis=0)
+
         magnitudes = [0,0,0]
         for i in range(3):
             def loss(magnitude):
@@ -120,8 +136,21 @@ for case in df.case.unique():
         #calculate residual
         distances = np.min(distance.cdist(avg, pc_data, 'euclidean'),axis=0)
         mean_distance = np.mean(distances)
+        median_distance = np.median(distances)
+        percentile_90th_distance = np.percentile(distances,90)
         max_distance = np.max(distances)
-        print('Mean distance: {}'.format(mean_distance))
-        print('Max distance: {}'.format(max_distance))
 
+        entry = {'case':case,
+                    'position':side,
+                    'mean_distance':mean_distance,
+                    'max_distance':max_distance,
+                    'median_distance':median_distance,
+                    '90th_percentile_distance':percentile_90th_distance,
+                    'largest_cancer':largest_cancer,
+                    'largest_cyst':largest_cyst}
+        print(entry)
+        results.append(entry)
+    print()
 
+df = pd.DataFrame(results)
+df.to_csv('/media/mcgoug01/nvme/ThirdYear/kits23sncct_objdata/residuals.csv',index=False)
