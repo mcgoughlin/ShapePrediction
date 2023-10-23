@@ -92,7 +92,8 @@ def process_dataframe(df, obj_folder, number_of_points=1000):
 
 
 def procrustes_analysis(target_points, reference_pointclouds, include_target=True,
-                        max_iterations=20000, tolerance=1e-7,return_transformations=False):
+                        max_iterations=20000, tolerance=1e-7,return_transformations=False,
+                        return_mapping=False):
     aligned_pointclouds = []
 
     target_cloud = o3d.geometry.PointCloud()
@@ -132,7 +133,10 @@ def procrustes_analysis(target_points, reference_pointclouds, include_target=Tru
     if return_transformations:
         return average_pointcloud, aligned_pointclouds, transformations
     else:
-        return average_pointcloud, aligned_pointclouds
+        if return_mapping:
+            return average_pointcloud, aligned_pointclouds, source_index
+        else:
+            return average_pointcloud, aligned_pointclouds
 
 
 def procrustes_analysis_normalised(target_points, reference_pointclouds, include_target=True,
