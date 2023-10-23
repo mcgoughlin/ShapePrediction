@@ -10,8 +10,10 @@ residual_df2 = pd.read_csv(ds2_residuals_csv_fp)
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+# change matplotlib backend to interactive display on linux pycharm
+plt.switch_backend('TkAgg')
 
-threshold = 1
+threshold = 10000
 
 residual_df1['name'] = np.where(((residual_df1['largest_cancer'] <threshold) & (residual_df1['largest_cyst'] < threshold)) > 0, 'normal', 'abnormal')
 residual_df2['name'] = np.where(((residual_df2['largest_cancer'] <threshold) & (residual_df2['largest_cyst'] < threshold)) > 0, 'normal', 'abnormal')
