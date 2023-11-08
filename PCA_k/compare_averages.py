@@ -16,7 +16,7 @@ if __name__ == "__main__":
     # obj_folder = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/cleaned_objs'
     obj_folder = '/media/mcgoug01/nvme/ThirdYear/kits23sncct_objdata/cleaned_objs'
     features_csv_fp = '/media/mcgoug01/nvme/ThirdYear/kits23sncct_objdata/features_labelled.csv'
-    number_of_points = 3000
+    number_of_points = 1000
     n_iter = 20000
     tolerance = 1e-7
     n_components = 10

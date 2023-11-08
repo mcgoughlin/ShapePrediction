@@ -21,12 +21,13 @@ from scipy.optimize import minimize
 dataset = 'kits23sncct_objdata'
 ov_data = 'kits23'
 percentile = 99
-number_of_points = 300
+number_of_points = 1000
 n_iter=20000
 tolerance=1e-7
-dist_to_label = 4
+dist_to_label = 4 #mm
 lambda_reg = 1e-3
-testing = False
+testing = True
+cancer_radius_filter = 20 #mm
 
 CASE_IMAGE_PATH = '/media/mcgoug01/nvme/Data/{}/images/'.format(ov_data)
 CASE_LABEL_PATH = '/media/mcgoug01/nvme/Data/{}/labels/'.format(ov_data)
@@ -46,8 +47,11 @@ average_pointcloud = np.load(KIDNEY_AVERAGE_PATH)
 average_pointcloud = average_pointcloud - average_pointcloud.mean(axis=0)
 left_count = np.zeros_like(average_pointcloud[:,:2])
 right_count = np.zeros_like(average_pointcloud[:,:2])
+lim = average_pointcloud.max()*1.1
+canc_thresh = (4/3)*np.pi*(cancer_radius_filter**3)
 
 df = pd.read_csv(FEATURES_CSV_FP)
+assert False
 # find the largest cancer and cyst in each position ['left','right'] in each case and create a separate column to store this information
 # cancer and cyst columns are denoted by 'cancer_i_vol' and 'cyst_i_vol' where i is an index betwenn 0 and 9
 # if there are less than 10 cancers or cysts, the remaining columns are filled with 0
@@ -107,9 +111,12 @@ for case in df.case.unique():
 
     # loop through each kidney side, centroid, and bbox
     for side, centroid, bbox in zip(['left', 'right'], [left_kidney_centroid, right_kidney_centroid], [left_kidney_bbox, right_kidney_bbox]):
-
-        largest_cancer = df.loc[df['case'] == case].loc[df['position'] == side]['max_cancer'].values[0]
-        largest_cyst = df.loc[df['case'] == case].loc[df['position'] == side]['max_cyst'].values[0]
+        # except error if side left/right does not exist
+        try:
+            largest_cancer = df.loc[df['case'] == case].loc[df['position'] == side]['max_cancer'].values[0]
+            largest_cyst = df.loc[df['case'] == case].loc[df['position'] == side]['max_cyst'].values[0]
+        except:
+            continue
         if side=='left': side_average = average_pointcloud.copy()
         else: side_average = np.array([average_pointcloud.copy()[:,0], average_pointcloud.copy()[:,1],average_pointcloud.copy()[:,2]*-1]).T
         # load pc
@@ -171,8 +178,8 @@ for case in df.case.unique():
         cyst_sample = cyst_sample[reverse_mapping]
 
         # smooth counts between neighbouring nodes according to proximity in the average kidney
-        cancer_sample = np.array([np.mean(cancer_sample[np.where(distance.cdist([average_pointcloud[i]], average_pointcloud) < dist_to_label)[1]]) for i in range(len(average_pointcloud))])
-        cyst_sample = np.array([np.mean(cyst_sample[np.where(distance.cdist([average_pointcloud[i]], average_pointcloud) < dist_to_label)[1]]) for i in range(len(average_pointcloud))])
+        cancer_sample = np.array([np.mean(cancer_sample[np.where(distance.cdist([average_pointcloud[i]], average_pointcloud) < dist_to_label//2)[1]]) for i in range(len(average_pointcloud))])
+        cyst_sample = np.array([np.mean(cyst_sample[np.where(distance.cdist([average_pointcloud[i]], average_pointcloud) < dist_to_label//2)[1]]) for i in range(len(average_pointcloud))])
 
         if side == 'left':
             left_count[:, 0] += cancer_sample
@@ -187,10 +194,16 @@ for case in df.case.unique():
             fig = plt.figure(figsize=(10, 10))
             ax = fig.add_subplot(121, projection='3d')
             ax.scatter(average_pointcloud[:, 0], average_pointcloud[:, 1], average_pointcloud[:, 2], c=left_count[:, 0])
+            ax.set_xlim(-lim, lim)
+            ax.set_ylim(-lim, lim)
+            ax.set_zlim(-lim, lim)
             ax.set_title('Left Kidney')
             ax = fig.add_subplot(122, projection='3d')
             ax.scatter(average_pointcloud[:, 0], average_pointcloud[:, 1], average_pointcloud[:, 2],
                        c=right_count[:, 0])
+            ax.set_xlim(-lim, lim)
+            ax.set_ylim(-lim, lim)
+            ax.set_zlim(-lim, lim)
             ax.set_title('Right Kidney')
             plt.show(block=True)
 
@@ -204,13 +217,18 @@ np.save(SAVE_PATH + 'both_count.npy',both_count)
 # # plot the average pointcloud and use the cancer count to colour the points
 # # left kidney
 fig = plt.figure(figsize=(10,10))
-ax = fig.add_subplot(131, projection='3d')
+ax = fig.add_subplot(121, projection='3d')
 ax.scatter(average_pointcloud[:,0],average_pointcloud[:,1],average_pointcloud[:,2],c=left_count[:,0])
+#set axes limits
+ax.set_xlim(-lim,lim)
+ax.set_ylim(-lim,lim)
+ax.set_zlim(-lim,lim)
 ax.set_title('Left Kidney')
-ax = fig.add_subplot(132, projection='3d')
+ax = fig.add_subplot(122, projection='3d')
 ax.scatter(average_pointcloud[:,0],average_pointcloud[:,1],average_pointcloud[:,2],c=right_count[:,0])
+#set axes limits
+ax.set_xlim(-lim,lim)
+ax.set_ylim(-lim,lim)
+ax.set_zlim(-lim,lim)
 ax.set_title('Right Kidney')
-ax = fig.add_subplot(133, projection='3d')
-ax.scatter(average_pointcloud[:,0],average_pointcloud[:,1],average_pointcloud[:,2],c=both_count[:,0])
-ax.set_title('Both Kidneys')
 plt.show()

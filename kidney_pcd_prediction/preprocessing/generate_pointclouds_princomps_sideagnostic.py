@@ -44,7 +44,7 @@ if __name__ == "__main__":
     features_csv_fp = '/media/mcgoug01/nvme/ThirdYear/kits23sncct_objdata/features_labelled.csv'
 
     pointcloud_save_folder = '/media/mcgoug01/nvme/ThirdYear/kits23sncct_objdata/aligned_pointclouds'
-    number_of_points = 300
+    number_of_points = 1000
     n_iter = 10000
     tolerance = 1e-7
     n_components = 10
@@ -95,6 +95,3 @@ if __name__ == "__main__":
         eigenpair = np.array([eigenvalue,eigenvector],dtype=object)
 
         np.save(pointcloud_save_folder + '/eigenpairs/eigenpair_{}.npy'.format(component_index),eigenpair)
-
-
-

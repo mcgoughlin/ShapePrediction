@@ -40,11 +40,11 @@ def save_aligned_pointclouds(aligned_pointclouds,cases,position,home_folder):
 
 
 if __name__ == "__main__":
-    obj_folder = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/cleaned_objs'
-    features_csv_fp = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/features_unlabelled.csv'
+    obj_folder = '/media/mcgoug01/nvme/ThirdYear/add_objdata/objects/Addenbrookes/cleaned_objs/'
+    features_csv_fp = '/media/mcgoug01/nvme/ThirdYear/add_objdata/objects/Addenbrookes/features_unlabelled.csv'
 
-    pointcloud_save_folder = '/media/mcgoug01/nvme/ThirdYear/CTORG_objdata/aligned_pointclouds_all'
-    number_of_points = 300
+    pointcloud_save_folder = '/media/mcgoug01/nvme/ThirdYear/add_objdata/aligned_pointclouds_all'
+    number_of_points = 1000
     n_iter = 10000
     tolerance = 1e-7
 
